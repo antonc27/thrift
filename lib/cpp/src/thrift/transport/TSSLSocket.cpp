@@ -532,8 +532,12 @@ void TSSLSocketFactory::initializeOpenSSL() {
   initialized = true;
   SSL_library_init();
   SSL_load_error_strings();
-  // static locking
-  mutexes = shared_array<Mutex>(new Mutex[::CRYPTO_num_locks()]);
+  // newer versions of OpenSSL changed CRYPTO_num_locks - see THRIFT-3878
+#ifdef CRYPTO_num_locks
+  mutexes = boost::shared_array<Mutex>(new Mutex[CRYPTO_num_locks()]);
+#else
+  mutexes = boost::shared_array<Mutex>(new Mutex[ ::CRYPTO_num_locks()]);
+#endif
   if (mutexes == NULL) {
     throw TTransportException(TTransportException::INTERNAL_ERROR,
           "initializeOpenSSL() failed, "
